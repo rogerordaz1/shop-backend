@@ -6,6 +6,7 @@ import {
   forgotPasswordCallback,
   verifyOtpCallback,
   resetPasswordCallback,
+  verifyTokenCallback,
 } from "../controllers/authController.js";
 
 import { validateRegisteredUser } from "../utils/validations.js";
@@ -13,17 +14,16 @@ import { validateRegisteredUser } from "../utils/validations.js";
 const authRouter = express.Router();
 
 // Define your authentication routes here
-const login = authRouter.post("/login", loginCallback);
+authRouter.post("/login", loginCallback);
 
-const register = authRouter.post("/register", validateRegisteredUser, registerCallback);
+authRouter.post("/register", validateRegisteredUser, registerCallback);
 
-const forgotPassword = authRouter.post(
-  "/forgot-password",
-  forgotPasswordCallback
-);
+authRouter.get("/verify-token", verifyTokenCallback);
 
-const verifyOtp = authRouter.post("/verify-otp", validateRegisteredUser, verifyOtpCallback);
+authRouter.post("/forgot-password", forgotPasswordCallback);
 
-const resetPassword = authRouter.post("/reset-password", resetPasswordCallback);
+authRouter.post("/verify-otp", verifyOtpCallback);
+
+authRouter.post("/reset-password", resetPasswordCallback);
 
 export default authRouter;

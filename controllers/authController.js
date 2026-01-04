@@ -11,6 +11,17 @@ import {
 } from "../config/env.js";
 import Token from "../models/token.model.js";
 
+const handleValidationErrors = (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const errorMessages = errors.array().map((err) => ({
+      message: err.msg,
+      field: err.path,
+    }));
+    return res.status(400).json({ errors: errorMessages });
+  }
+};
+
 const loginCallback = async (req, res, next) => {
   try {
     // const session = await mongoose.startSession();
@@ -68,22 +79,10 @@ const loginCallback = async (req, res, next) => {
       data: {
         user,
         accessToken,
-        refreshToken,
       },
     });
   } catch (error) {
     next(error);
-  }
-};
-
-const handleValidationErrors = (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    const errorMessages = errors.array().map((err) => ({
-      message: err.msg,
-      field: err.path,
-    }));
-    return res.status(400).json({ errors: errorMessages });
   }
 };
 
@@ -140,6 +139,53 @@ const registerCallback = async (req, res, next) => {
   }
 };
 
+const verifyTokenCallback = async (req, res , next) => {
+  try {
+    let token;
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
+    }
+
+    const accessToken = await Token.findOne({ accessToken: token });
+
+    if (!accessToken) {
+      const error = new Error("Invalid token");
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const tokenData = jwt.decode(accessToken.refreshToken);
+
+    const user = await User.findById(tokenData.userId);
+
+    if (!user) {
+      const error = new Error("User not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const isValid = jwt.verify(accessToken.refreshToken, JWT_REFRESH_SECRET);
+
+    if (!isValid) {
+      const error = new Error("Invalid token");
+      error.statusCode = 401;
+      throw error;
+    }
+
+
+    return res.status(200).json({ 
+      isValid: true,
+      success: true,
+      message: "Token is valid", 
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const forgotPasswordCallback = async (req, res) => {
   return res.status(200).json({ message: "Forgot password email sent" });
 };
@@ -158,4 +204,5 @@ export {
   forgotPasswordCallback,
   verifyOtpCallback,
   resetPasswordCallback,
+  verifyTokenCallback
 };
